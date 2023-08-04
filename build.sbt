@@ -210,7 +210,9 @@ lazy val chiselSettings = Seq(
     "org.scalatest" %% "scalatest" % "3.2.16" % "test",
     "org.scalatestplus" %% "scalacheck-1-16" % "3.2.14.0" % "test",
     "com.lihaoyi" %% "upickle" % "3.1.0",
-    "org.chipsalliance" %% "firtool-resolver" % "0.1.0-SNAPSHOT"
+    "org.chipsalliance" %% "firtool-resolver" % "0.1.0-SNAPSHOT",
+    // The above can get this at runtime, but runtime doesn't know about s01 sonatype resolver
+    "org.chipsalliance" % "llvm-firtool" % "1.48.0-SNAPSHOT"
   )
 ) ++ (
   // Tests from other projects may still run concurrently
