@@ -6,6 +6,7 @@ import mill.scalalib.scalafmt._
 import coursier.maven.MavenRepository
 import mill.scalalib.api.ZincWorkerUtil.matchingVersions
 import $file.common
+import $file.tests
 
 object v {
   val pluginScalaCrossVersions = Seq(
