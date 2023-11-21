@@ -12,6 +12,7 @@ import chisel3.internal.Builder.pushCommand
 import chisel3.internal._
 import chisel3.internal.sourceinfo._
 import chisel3.internal.firrtl._
+import chisel3.properties.Property
 import chisel3.reflect.DataMirror
 import chisel3.util.simpleClassName
 
@@ -214,6 +215,8 @@ private[chisel3] object getMatchedFields {
   def apply(x: Data, y: Data): Seq[(Data, Data)] = (x, y) match {
     case (x: Element, y: Element) =>
       require(x.typeEquivalent(y))
+      Seq(x -> y)
+    case (x: Property[_], y: Property[_]) =>
       Seq(x -> y)
     case (x: Record, y: Record) =>
       (x._elements
