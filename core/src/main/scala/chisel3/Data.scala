@@ -600,7 +600,12 @@ abstract class Data extends HasId with NamedComponent with SourceInfoDoc {
     topBindingOpt match {
       case Some(binding: ReadOnlyBinding) =>
         throwException(s"internal error: attempted to generate LHS ref to ReadOnlyBinding $binding")
-      case Some(ViewBinding(target)) => reify(target).lref
+      case Some(ViewBinding(target)) => target match {
+        case e: Element => reify(e).lref
+        case _          =>
+          // TODO: probably need to reify Property[_], or other "elements"
+          throwException("Unhandled ViewBinding target")
+      }
       case Some(binding: TopBinding) => Node(this)
       case opt => throwException(s"internal error: unknown binding $opt in generating LHS ref")
     }
@@ -620,7 +625,12 @@ abstract class Data extends HasId with NamedComponent with SourceInfoDoc {
     requireIsHardware(this)
     topBindingOpt match {
       // DataView
-      case Some(ViewBinding(target)) => reify(target).ref
+      case Some(ViewBinding(target)) => target match {
+        case e: Element => reify(e, target.topBinding).ref
+        case _          =>
+          // TODO: probably need to reify Property[_], or other "elements"
+          throwException("Unhandled ViewBinding target")
+      }
       case Some(AggregateViewBinding(viewMap)) =>
         viewMap.get(this) match {
           case None => materializeWire() // FIXME FIRRTL doesn't have Aggregate Init expressions

@@ -4,6 +4,7 @@ package chisel3.experimental
 
 import chisel3._
 import chisel3.internal._
+import chisel3.properties.Property
 
 import scala.annotation.{implicitNotFound, tailrec}
 import scala.collection.mutable
@@ -97,11 +98,16 @@ package object dataview {
     // Resulting bindings for each Element of the View
     // Kept separate from Aggregates for totality checking
     val elementBindings =
-      new mutable.LinkedHashMap[Data, mutable.ListBuffer[Element]] ++
+      new mutable.LinkedHashMap[Data, mutable.ListBuffer[Data]] ++
         getRecursiveFields
           .lazilyNoPath(view)
-          .collect { case (elt: Element) => elt }
-          .map(_ -> new mutable.ListBuffer[Element])
+          .collect {
+            field => field match {
+              case (elt: Element) => elt
+              case (prop: Property[_]) => prop
+            }
+          }
+          .map(_ -> new mutable.ListBuffer[Data])
 
     // Record any Aggregates that correspond 1:1 for reification
     // Using Data instead of Aggregate to avoid unnecessary checks
@@ -111,7 +117,7 @@ package object dataview {
       viewFieldLookup.get(d).map(_ + " ").getOrElse("") + d.toString
 
     // Helper for recording the binding of each
-    def onElt(te: Element, ve: Element): Unit = {
+    def onElt(te: Data, ve: Data): Unit = {
       // TODO can/should we aggregate these errors?
       def err(name: String, arg: Data) =
         throw InvalidViewException(s"View mapping must only contain Elements within the $name, got $arg")
@@ -128,8 +134,8 @@ package object dataview {
         /* Allow views where the types are equal. */
         case (a, b) if a.getClass == b.getClass =>
           // View width must be unknown or match target width
-          if (vex.widthKnown && vex.width != tex.width) {
-            def widthAsString(x: Element) = x.widthOption.map("<" + _ + ">").getOrElse("<unknown>")
+          if (vex.isWidthKnown && vex.width != tex.width) {
+            def widthAsString(x: Data) = x.widthOption.map("<" + _ + ">").getOrElse("<unknown>")
             val fieldName = viewFieldName(vex)
             val vwidth = widthAsString(vex)
             val twidth = widthAsString(tex)
@@ -158,6 +164,7 @@ package object dataview {
       // Special cased because getMatchedFields checks typeEquivalence on Elements (and is used in Aggregate path)
       // Also saves object allocations on common case of Elements
       case (ae: Element, be: Element) => onElt(ae, be)
+      case (ap: Property[_], bp: Property[_]) => onElt(ap, bp)
 
       case (aa: Aggregate, ba: Aggregate) =>
         if (!ba.typeEquivalent(aa)) {
@@ -180,9 +187,10 @@ package object dataview {
       case (data, targets) =>
         val targetsx = targets match {
           case collection.Seq(target: Element) => target
+          case collection.Seq(target: Property[_]) => target
           case collection.Seq() =>
             viewNonTotalErrors = data :: viewNonTotalErrors
-            data.asInstanceOf[Element] // Return the Data itself, will error after this map, cast is safe
+            data // Return the Data itself, will error after this map, cast is safe
           case x =>
             throw InvalidViewException(s"Got $x, expected Seq(_: Direct)")
         }
@@ -194,7 +202,12 @@ package object dataview {
     // Check for totality of Target
     targetSeen.foreach { seen =>
       val lookup = implicitly[DataProduct[T]].dataIterator(target, "_")
-      for (missed <- lookup.collect { case (d: Element, name) if !seen(d) => name }) {
+      for (missed <- lookup.collect {
+        field => field match {
+          case (d: Element, name) if !seen(d) => name
+          case (p: Property[_], name) if !seen(p) => name
+        }
+      }) {
         targetNonTotalErrors = missed :: targetNonTotalErrors
       }
     }
@@ -204,8 +217,9 @@ package object dataview {
     }
 
     view match {
-      case elt: Element   => view.bind(ViewBinding(elementResult(elt)))
-      case agg: Aggregate =>
+      case elt:  Element       => view.bind(ViewBinding(elementResult(elt)))
+      case prop: Property[_]   => view.bind(ViewBinding(elementResult(prop)))
+      case agg:  Aggregate     =>
         // Don't forget the potential mapping of the view to the target!
         target match {
           case d: Data if total =>
@@ -228,11 +242,14 @@ package object dataview {
 
   // Traces an Element that may (or may not) be a view until it no longer maps
   // Inclusive of the argument
-  private def unfoldView(elt: Element): LazyList[Element] = {
-    def rec(e: Element): LazyList[Element] = e.topBindingOpt match {
+  private def unfoldView(elt: Data): LazyList[Data] = {
+    def rec(e: Data): LazyList[Data] = e.topBindingOpt match {
       case Some(ViewBinding(target)) => target #:: rec(target)
       case Some(avb: AggregateViewBinding) =>
-        val target = avb.lookup(e).get
+        val target = e match {
+          case elt:  Element     => avb.lookup(elt).get
+          case prop: Property[_] => avb.lookup(prop).get
+        }
         target #:: rec(target)
       case Some(_) | None => LazyList.empty
     }
@@ -257,7 +274,12 @@ package object dataview {
     */
   @tailrec private[chisel3] def reify(elt: Element, topBinding: TopBinding): Element =
     topBinding match {
-      case ViewBinding(target) => reify(target, target.topBinding)
+      case ViewBinding(target) => target match {
+        case e: Element => reify(e, target.topBinding)
+        case _          =>
+          // TODO: probably need to reify Property[_], or other "elements"
+          throwException("Unhandled ViewBinding target")
+      }
       case _                   => elt
     }
 

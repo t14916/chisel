@@ -5,7 +5,7 @@ package chisel3.internal
 import chisel3._
 import chisel3.experimental.BaseModule
 import chisel3.internal.firrtl.{LitArg, PropertyLit}
-import chisel3.properties.Class
+import chisel3.properties.{Class, Property}
 
 import scala.collection.immutable.VectorMap
 
@@ -137,7 +137,7 @@ case class MemTypeBinding[T <: Data](parent: MemBase[T]) extends Binding {
 case class DontCareBinding() extends UnconstrainedBinding
 
 // Views currently only support 1:1 Element-level mappings
-private[chisel3] case class ViewBinding(target: Element) extends UnconstrainedBinding
+private[chisel3] case class ViewBinding(target: Data) extends UnconstrainedBinding
 
 /** Binding for Aggregate Views
   * @param childMap Mapping from children of this view to their respective targets
@@ -149,6 +149,7 @@ private[chisel3] case class ViewBinding(target: Element) extends UnconstrainedBi
 private[chisel3] case class AggregateViewBinding(childMap: Map[Data, Data]) extends UnconstrainedBinding {
   // Helper lookup function since types of Elements always match
   def lookup(key: Element): Option[Element] = childMap.get(key).map(_.asInstanceOf[Element])
+  def lookup(key: Property[_]): Option[Property[_]] = childMap.get(key).map(_.asInstanceOf[Property[_]])
 }
 
 /** Binding for Data's returned from accessing an Instance/Definition members, if not readable/writable port */

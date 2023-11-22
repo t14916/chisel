@@ -175,7 +175,12 @@ object Lookupable {
 
     // We have to lookup the target(s) of the view since they may need to be underlying into the current context
     val newBinding = data.topBinding match {
-      case ViewBinding(target) => ViewBinding(lookupData(reify(target)))
+      case ViewBinding(target) => target match {
+        case e: Element => ViewBinding(lookupData(reify(e)))
+        case _          =>
+          // TODO: probably need to reify Property[_], or other "elements"
+          throwException("Unhandled ViewBinding target")
+      }
       case avb @ AggregateViewBinding(map) =>
         data match {
           case e: Element   => ViewBinding(lookupData(reify(avb.lookup(e).get)))
