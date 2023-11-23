@@ -407,22 +407,6 @@ class PropertySpec extends ChiselFlatSpec with MatchesAndOmits {
     )()
   }
 
-  it should "NOT support <>" in {
-    class MyBundle extends Bundle {
-      val foo = Property[String]()
-      val bar = Flipped(Property[BigInt]())
-    }
-    val e = the[ChiselException] thrownBy ChiselStage.emitCHIRRTL(
-      new RawModule {
-        val aligned = IO(new MyBundle)
-        val flipped = IO(Flipped(new MyBundle))
-        aligned <> flipped
-      },
-      Array("--throw-on-first-error")
-    )
-    e.getMessage should include("Field '_.bar' of type Property[Integer] does not support <>, use :<>= instead")
-  }
-
   it should "support being nested in a Bundle in a wire" in {
     class MyBundle extends Bundle {
       val foo = Property[String]()
