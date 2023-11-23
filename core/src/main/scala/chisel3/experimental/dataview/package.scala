@@ -4,6 +4,7 @@ package chisel3.experimental
 
 import chisel3._
 import chisel3.internal._
+import chisel3.properties.Property
 
 import scala.annotation.{implicitNotFound, tailrec}
 import scala.collection.mutable
@@ -137,6 +138,7 @@ package object dataview {
               s"View field $fieldName has width ${vwidth} that is incompatible with target value $tex's width ${twidth}"
             )
           }
+        case (_: Property[_], _: Property[_]) =>
         /* allow bool <=> reset views. */
         case (a: Bool, _: Reset) =>
         case (_: Reset, a: Bool) =>

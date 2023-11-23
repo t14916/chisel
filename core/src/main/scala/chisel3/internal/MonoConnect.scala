@@ -408,10 +408,14 @@ private[chisel3] object MonoConnect {
 
   def propConnect(
     sourceInfo: SourceInfo,
-    sink:       Property[_],
-    source:     Property[_],
+    _sink:       Property[_],
+    _source:     Property[_],
     context:    BaseModule
   ): Unit = {
+    // Reify sink and source if they're views.
+    val sink = reify(_sink)
+    val source = reify(_source)
+
     checkConnect(sourceInfo, sink, source, context)
     // Add the PropAssign command directly onto the correct BaseModule subclass.
     context match {
