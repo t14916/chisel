@@ -3,6 +3,7 @@
 package chiselTests.properties
 
 import chisel3._
+import chisel3.experimental.FlatIO
 import chisel3.properties.{Class, Path, Property, PropertyType}
 import chiselTests.{ChiselFlatSpec, MatchesAndOmits}
 import circt.stage.ChiselStage
@@ -583,5 +584,21 @@ class PropertySpec extends ChiselFlatSpec with MatchesAndOmits {
       "propassign barA, barObj",
       "propassign barB, barObj"
     )()
+  }
+
+  it should "work with FlatIO" in {
+    val chirrtl = ChiselStage.emitCHIRRTL(new RawModule {
+      val flatModule = Module(new RawModule {
+        val io = FlatIO(new Bundle {
+          val bool = Input(Bool())
+          val prop = Input(Property[Int]())
+        })
+      })
+
+      flatModule.io.bool := true.B
+      flatModule.io.prop := Property(1)
+    })
+
+    println(chirrtl)
   }
 }
