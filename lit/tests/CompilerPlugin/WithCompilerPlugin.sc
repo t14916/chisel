@@ -1,9 +1,4 @@
-// RUN: scala-cli %s
-//> using javaHome $JAVAHOME
-//> using jars $RUNCLASSPATH
-//> using scala $SCALAVERSION
-//> using options $PLUGINJARS
-//> using javaOpt --enable-native-access=ALL-UNNAMED --enable-preview $JAVALIBRARYPATH
+// RUN: scala-cli --java-home "$JAVAHOME" --extra-jars "$RUNCLASSPATH" --scalac-option "$SCALAVERSION" --java-opt "--enable-native-access=ALL-UNNAMED --enable-preview $JAVALIBRARYPATH" --compiler-plugin "$PLUGINJARS"
 
 import chisel3._
 import circt.stage.ChiselStage
